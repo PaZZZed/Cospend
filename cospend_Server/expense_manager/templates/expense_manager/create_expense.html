@@ -1,0 +1,108 @@
+{% extends '_base.html' %}
+{% block content %}
+<style>
+    .container {
+        max-width: 600px;
+        margin: auto;
+        padding: 20px;
+        border-radius: 10px;
+        background-color: #f9f9f9;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    h2, h3 {
+        color: #333;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    form {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        width: 100%;
+    }
+
+    label {
+        margin-bottom: 5px;
+    }
+
+    input, textarea, select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background-color: #4CAF50;
+        color: white;
+        font-size: 16px;
+        cursor: pointer;
+        align-self: center;
+        margin-top: 20px;
+    }
+
+    button:hover {
+        background-color: #45a049;
+    }
+
+    ul {
+        list-style-type: none;
+        padding: 0;
+        width: 100%;
+        text-align: left;
+    }
+
+    li {
+        background-color: #eee;
+        margin: 5px 0;
+        padding: 10px;
+        border-radius: 5px;
+    }
+</style>
+
+<div class="container">
+    <h2>Create Expense</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="form-group">
+            {{ form.title.label_tag }} {{ form.title }}
+        </div>
+        <div class="form-group">
+            {{ form.amount.label_tag }} {{ form.amount }}
+        </div>
+        <div class="form-group">
+            {{ form.date.label_tag }} {{ form.date }}
+        </div>
+        <div class="form-group">
+            {{ form.description.label_tag }} {{ form.description }}
+        </div>
+        <div class="form-group">
+            {{ form.involved_members.label_tag }} {{ form.involved_members }}
+        </div>
+     
+        <button type="submit">Submit</button>
+    </form>
+
+    <h3>Group Balances</h3>
+    <ul>
+        {% for balance in balances %}
+            <li>{{ balance.user.username }}: {{ balance.amount }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}
