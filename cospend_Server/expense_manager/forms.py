@@ -1,4 +1,5 @@
 # forms.py
+from django.core.exceptions import ValidationError
 from django import forms
 from django.contrib.auth.models import User
 
@@ -36,13 +37,25 @@ class ExpenseForm(forms.ModelForm):
         model = Expense
         fields = ['title', 'amount', 'date', 'description', 'involved_members']
         widgets = {
-            'date': forms.DateInput(attrs={'type': 'date'})
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'involved_members': forms.CheckboxSelectMultiple
         }
 
     def __init__(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
         group = kwargs.pop("group", None)
         super(ExpenseForm, self).__init__(*args, **kwargs)
-        self.fields['involved_members'].disabled = True
-        self.fields['involved_members'].required = False
+
         if group:
-            self.fields["involved_members"].queryset = group.members.all()
+            self.fields['involved_members'].queryset = group.members.all()
+            self.fields['involved_members'].required = False
+            # Pre-select the current user
+            if user and user in group.members.all():
+                self.fields['involved_members'].initial = [user.id]
+
+    def clean_involved_members(self):
+        print(self)
+        involved_members = self.cleaned_data.get('involved_members')
+        if len(involved_members) < 2:
+            raise ValidationError("At least two members must be involved in the expense.")
+        return involved_members

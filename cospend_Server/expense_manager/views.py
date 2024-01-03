@@ -8,6 +8,7 @@ from django.shortcuts import get_object_or_404
 from django.http import Http404, HttpResponse, HttpResponseForbidden
 
 
+
 # home views to redirect either to login or register
 def home(request):
     return render(request, "expense_manager/home.html")
@@ -102,33 +103,32 @@ def create_expense(request, group_id):
     balances = Balance.objects.filter(group=group)
 
     if request.method == 'POST':
-        form = ExpenseForm(request.POST, group=group)
+        form = ExpenseForm(request.POST, user=request.user, group=group)
         if form.is_valid():
             expense = form.save(commit=False)
-            
             expense.paid_by = request.user
+            expense.group = group
             expense.save()
+            form.save_m2m()  # Save the many-to-many data
 
-            # Automatically include all group members as involved members because disable in form
-            expense.involved_members.set(group.members.all())
+            involved_members = expense.involved_members.all()
+            if involved_members.exists():  # Check if there are involved members
+                total_amount = expense.amount
+                share_amount = total_amount / len(involved_members)
 
-            # Calculate each member's share of the expense
-            total_amount = expense.amount
-            share_amount = total_amount / len(group.members.all())
-
-            # Update the balance for each member
-            for member in group.members.all():
-                balance, _ = Balance.objects.get_or_create(user=member, group=group)
-                if member == request.user:
-                    balance.amount += total_amount - share_amount
-                else:
-                    balance.amount -= share_amount
-                balance.save()
+                # Update the balance for each involved member
+                for member in involved_members:
+                    balance, _ = Balance.objects.get_or_create(user=member, group=group)
+                    if member == request.user:
+                        balance.amount += total_amount - share_amount
+                    else:
+                        balance.amount -= share_amount
+                    balance.save()
 
             return redirect('manage_expense')
 
     else:
-        form = ExpenseForm(group=group)
+        form = ExpenseForm(user=request.user, group=group)
 
     return render(request, 'expense_manager/create_expense.html', {'form': form, 'balances': balances})
 
@@ -139,5 +139,5 @@ def consult_expenses(request, group_id):
     if request.user not in group.members.all():
         return HttpResponseForbidden()
 
-    expenses = Expense.objects.filter(involved_members__in=group.members.all()).distinct()
+    expenses = Expense.objects.filter(group=group)
     return render(request, 'expense_manager/consult_expenses.html', {'group': group, 'expenses': expenses})

@@ -13,6 +13,7 @@ class Expense(models.Model):
     involved_members = models.ManyToManyField(User, related_name='expenses_involved')
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     description = models.TextField(blank=True, null=True)
+    group = models.ForeignKey(Group, on_delete=models.CASCADE)
 
 class Balance(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
