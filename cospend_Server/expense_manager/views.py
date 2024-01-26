@@ -2,11 +2,15 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from .forms import ExpenseForm, GroupForm, EditGroupForm
-from .models import Expense, Group, Balance
+from .models import Expense, Group, Balance, UserProfile
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import Http404, HttpResponse, HttpResponseForbidden
+from django.http import JsonResponse
+from django.contrib.auth.models import User
+from django.views.decorators.http import require_POST
 
+import json
 
 
 # home views to redirect either to login or register
@@ -20,10 +24,19 @@ def register(request):
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            public_key = request.POST.get(
+                "publicKey"
+            )  # Retrieve the public key from the form
+            # print("my request ", request.POST)
+            # print("public key", public_key)
+            # Create and save the UserProfile instance
+            UserProfile.objects.create(user=user, public_key=public_key)
+
             login(request, user)
             return redirect("home")  # Redirect to a home page or other appropriate page
     else:
         form = UserCreationForm()
+
     return render(request, "expense_manager/register.html", {"form": form})
 
 
@@ -32,6 +45,34 @@ def info(request):
     return render(request, "expense_manager/info.html")
 
 
+# def manage_groupe(request):
+#     owned_groups = Group.objects.filter(owner=request.user)
+
+#     if request.method == "POST":
+#         form = GroupForm(request.POST, user=request.user)
+#         if form.is_valid():
+#             # Retrieve encrypted group name from the POST request
+#             encrypted_group_name = request.POST.get("encrypted_group_name")
+
+#             # Create the group with the encrypted name
+#             group = Group.objects.create(owner=request.user, name=encrypted_group_name)
+#             group.members.set(form.cleaned_data["members"])
+#             group.members.add(request.user)
+
+#             for member in group.members.all():
+#                 Balance.objects.create(user=member, group=group, amount=0)
+
+#             return redirect("manage_groupe")
+
+#     else:
+#         form = GroupForm(user=request.user)
+
+
+#     return render(
+#         request,
+#         "expense_manager/manage_groupe.html",
+#         {"form": form, "owned_groups": owned_groups},
+#     )
 def manage_groupe(request):
     # print(dir(request))
     owned_groups = Group.objects.filter(
@@ -99,10 +140,10 @@ def create_expense(request, group_id):
 
     if request.user not in group.members.all():
         return HttpResponseForbidden()
-    
+
     balances = Balance.objects.filter(group=group)
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = ExpenseForm(request.POST, user=request.user, group=group)
         if form.is_valid():
             expense = form.save(commit=False)
@@ -125,12 +166,16 @@ def create_expense(request, group_id):
                         balance.amount -= share_amount
                     balance.save()
 
-            return redirect('manage_expense')
+            return redirect("manage_expense")
 
     else:
         form = ExpenseForm(user=request.user, group=group)
 
-    return render(request, 'expense_manager/create_expense.html', {'form': form, 'balances': balances})
+    return render(
+        request,
+        "expense_manager/create_expense.html",
+        {"form": form, "balances": balances},
+    )
 
 
 @login_required
@@ -140,4 +185,23 @@ def consult_expenses(request, group_id):
         return HttpResponseForbidden()
 
     expenses = Expense.objects.filter(group=group)
-    return render(request, 'expense_manager/consult_expenses.html', {'group': group, 'expenses': expenses})
+    return render(
+        request,
+        "expense_manager/consult_expenses.html",
+        {"group": group, "expenses": expenses},
+    )
+
+
+# PUBLIC KEY FETCH
+# def get_public_keys(request):
+#     users = User.objects.all()
+#     keys = {user.username: user.userprofile.public_key for user in users}
+#     return JsonResponse(keys)
+
+
+@login_required
+def get_public_key(request):
+    print("my user ", request.user)
+    public_key = request.user.userprofile.public_key
+    
+    return JsonResponse({"publicKey": public_key})

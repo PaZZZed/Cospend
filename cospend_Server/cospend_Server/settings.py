@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     # mon app
     "expense_manager.apps.ExpenseManagerConfig",
     "django_extensions",
+    'rest_framework',
 ]
 
 MIDDLEWARE = [

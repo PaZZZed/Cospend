@@ -1,9 +1,13 @@
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
-
+from . import api_views
 from . import views
 
 urlpatterns = [
+    path('manage_groupe/api/public_key/', views.get_public_key, name='get_public_key'),
+    path('api/get-user-public-keys/', api_views.get_user_public_keys, name='get_user_public_keys'),
+
+
     path("", views.home, name="home"),
     path("register/", views.register, name="register"),
     # path('login/', views.login, name='login'),
